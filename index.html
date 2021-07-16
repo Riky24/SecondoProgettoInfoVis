@@ -1,15 +1,146 @@
-<!DOCTYPE html>
 <html>
+  <head>
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  </head>
+  <body>
+<svg width="1000px"; height="1000px";></svg>
+	
+	<script>
+   
+ var width = 1000; 
+ var rad = 5;
+ var svg = d3.select('svg');
 
-<head>
-  <meta name="description" content="Points Along an Archimedean Spiral" />
-  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-  <script type="text/javascript" src="https://d3js.org/d3.v2.js"></script>
-</head>
+var backLayer = svg.append("g");
+var frontLayer = svg.append("g");
 
-<body>
-  <div id="chart"></div>
-  <script type="text/javascript" src="index.js"></script>
-</body>
+var directionLR = true;
+var height = 1;
+var limX = 0;
+var edges = [];
+var nodes = [];
 
+function setXY(n1, n2){
+	let varX = 0;
+	let d = n2.height;
+	if (directionLR) {
+		varX = (d-limX) * 30 + 10;
+	}
+	else {
+		varX = width-((d-limX) * 30 + 10);
+	}
+
+	if (varX>=width) {
+		direction = directionLR = false;
+		height = height+1;
+		limX = d;
+		varX = width -((d-limX) * 30 + 10);
+	}
+	else if (varX<=10) {
+		direction = directionLR = true;
+		height = height+1;
+		limX = d;
+		varX = (d-limX) * 30 + 10;
+	}
+	let varY = 20*height;
+	return {
+		x: varX,
+		y: varY
+	}
+}
+
+function createEdges(block){
+	if (block.prev_block!=""){
+		let edge = {"hashFrom": block.prev_block, "hashTo": block.hash};
+		if (getNode(edge,0)!=null){
+			getNode(edge,0).son += 1;
+		};
+		edges.push(edge);
+	}
+	nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":0, "y":0, "son":0})
+}
+
+function getNode(edge, position){
+	let n = null;
+	if (position==0){
+		n = nodes.filter(node => node.hash == edge.hashFrom);
+	}
+	else{
+		n = nodes.filter(node => node.hash == edge.hashTo);
+	}
+	return n[0];
+}
+
+
+var data = d3.json("blockchain.json", function(data) {
+	console.log(data);
+
+	var dataSet = data.blocks.map(function(block) {
+		d = block.height;
+		//createNode(block);
+		createEdges(block);
+		//return setXY(d);
+	});
+	//console.log(nodes);
+	//console.log(edges);
+
+	var coordinates = edges.map(function(edge){
+		n1 = getNode(edge, 0);
+		n2 = getNode(edge, 1);
+		//console.log(n1);
+		console.log(n2);
+		return setXY(n1, n2);
+	});
+
+	displayCircles(coordinates);
+	displayLine(coordinates);
+
+});
+
+var lineGenerator = d3.svg.line()
+.x(function(d) {
+			return d.x
+	})
+.y(function(d) {
+			return d.y
+	})
+.interpolate("monotone")
+
+
+  function displayCircles(data) {
+  var circle = frontLayer.selectAll(null)
+    .data(data)
+    .enter()
+    .append('circle')
+    .attr({
+      r: rad,
+      cx: function(d) {
+      	return d.x
+      },
+      cy: function(d) {
+      	return d.y
+      },
+      fill: 'white',
+      stroke: "black",
+      "stroke-width": "3px"
+    });
+};
+
+
+function displayLine(data) {
+  var line = backLayer.append("path")
+    .datum(data)
+    .attr({
+      d: lineGenerator(data),
+      fill: 'none',
+      stroke: "red",
+      "stroke-width": "3px",
+      "shape-rendering": "geometricPrecision"
+    });
+
+  var totalLength = line.node().getTotalLength();
+}
+
+</script>
+  </body>
 </html>
