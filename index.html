@@ -1,53 +1,95 @@
 <html>
-  <head>
+<head>
 	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-  </head>
-  <body>
-<svg width="1000px"; height="1000px";></svg>
+</head>
+<style type="text/css">
+
+	svg {
+		font-family: "Helvetica Neue", Helvetica;
+	}
+
+	line {
+		shape-rendering: crispEdges;
+		vector-effect: non-scaling-stroke;
+
+		stroke: #000;
+		stroke-width: 2px;
+	}
+
+	circle {
+		shape-rendering: crispEdges;
+		vector-effect: non-scaling-stroke;
+
+		fill: lightsteelblue;
+		stroke: steelblue;
+		stroke-width: 1.5px;
+	}
+
+	circle:hover {
+		cursor: pointer;
+	}
+
+	circle.active-d3-item {
+		fill: red;
+	}
+
+</style>
+<body>
+	<svg width="1000px"; height="1000px";></svg>
 	
 	<script>
-   
- var width = 1000; 
- var rad = 5;
- var svg = d3.select('svg');
 
-var backLayer = svg.append("g");
-var frontLayer = svg.append("g");
+		var width = 1000; 
+		var rad = 5;
+		var svg = d3.select('svg');
 
-var directionLR = true;
-var height = 1;
-var limX = 0;
-var edges = [];
-var nodes = [];
+		var directionLR = true;
+		var edges = [];
+		var nodes = [];
 
-function setXY(n1, n2){
-	let varX = 0;
-	let d = n2.height;
-	if (directionLR) {
-		varX = (d-limX) * 30 + 10;
-	}
-	else {
-		varX = width-((d-limX) * 30 + 10);
-	}
+		function setXY(n1, n2){
+			let varX = 0;
+			let d = n1.x;
+			let h = n1.y;
+			if (directionLR) {
+				varX = d+30;
+			}
+			else {
+				varX = d-30;
+			}
 
-	if (varX>=width) {
-		direction = directionLR = false;
-		height = height+1;
-		limX = d;
-		varX = width -((d-limX) * 30 + 10);
-	}
-	else if (varX<=10) {
-		direction = directionLR = true;
-		height = height+1;
-		limX = d;
-		varX = (d-limX) * 30 + 10;
-	}
-	let varY = 20*height;
-	return {
-		x: varX,
-		y: varY
-	}
-}
+			if (varX>=width) {
+				h = h+20;
+				varX = d;
+				directionLR = false;
+			}
+			else if (varX<=10) {
+				directionLR = true;
+				h = h+20;
+				varX = d;
+			}
+
+			else if (!directionLR&&(varX+60>=width)) {
+				h = h+20;
+			}
+			else if (directionLR&&(varX-60<=10) && n1.prev_block!="") {
+				h = h+20;
+			}
+
+			let varY = h;
+			if(n1.son>1){
+				varY = (h+20);
+			}
+			n2.y = varY; 
+			n2.x = varX;
+			n1.son -= 1;
+			return {
+				x2: varX,
+				y2: varY,
+				x1: n1.x,
+				y1: n1.y
+			}
+		}
 
 function createEdges(block){
 	if (block.prev_block!=""){
@@ -57,7 +99,7 @@ function createEdges(block){
 		};
 		edges.push(edge);
 	}
-	nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":0, "y":0, "son":0})
+	nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":20, "y":20, "son":0})
 }
 
 function getNode(edge, position){
@@ -77,70 +119,84 @@ var data = d3.json("blockchain.json", function(data) {
 
 	var dataSet = data.blocks.map(function(block) {
 		d = block.height;
-		//createNode(block);
 		createEdges(block);
-		//return setXY(d);
 	});
-	//console.log(nodes);
-	//console.log(edges);
 
 	var coordinates = edges.map(function(edge){
 		n1 = getNode(edge, 0);
 		n2 = getNode(edge, 1);
-		//console.log(n1);
-		console.log(n2);
 		return setXY(n1, n2);
 	});
-
-	displayCircles(coordinates);
-	displayLine(coordinates);
+	generator(coordinates);
 
 });
 
-var lineGenerator = d3.svg.line()
-.x(function(d) {
-			return d.x
-	})
-.y(function(d) {
-			return d.y
-	})
-.interpolate("monotone")
+function generator(data){
+	// Generating the svg lines attributes
+	var lineAttributes = {
+		'x1': function(d) {
+			return d.x1;
+		},
+		'y1': function(d) {
+			return d.y1;
+		},
+		'x2': function(d) {
+			return d.x2;
+		},
+		'y2': function(d) {
+			return d.y2;
+		}
+	};
 
+	// Pointer to the d3 lines
+	var lines = svg
+	.selectAll('line')
+	.data(data)
+	.enter()
+	.append('line')
+	.attr(lineAttributes);
 
-  function displayCircles(data) {
-  var circle = frontLayer.selectAll(null)
-    .data(data)
-    .enter()
-    .append('circle')
-    .attr({
-      r: rad,
-      cx: function(d) {
-      	return d.x
-      },
-      cy: function(d) {
-      	return d.y
-      },
-      fill: 'white',
-      stroke: "black",
-      "stroke-width": "3px"
-    });
+	var topEndPoints = data.map(function(line, i) {
+		return {
+			'x': line.x1,
+			'y': line.y1,
+			'marker': 'marker-start',
+			'lineIndex': i 
+		};
+	});
+
+	var bottomEndPoints = data.map(function(line, i) {
+		return {
+			'x': line.x2,
+			'y': line.y2,
+			'marker': 'marker-end',
+			'lineIndex': i
+		};
+	});
+
+	var endPointsData = topEndPoints.concat(bottomEndPoints);
+	var circle = bottomEndPoints.concat(topEndPoints[0]);
+
+	// Generating the svg circle attributes
+	var endPointsAttributtes = {
+		'r': rad,
+		'cx': function(d) {
+			return d.x;
+		},
+		'cy': function(d) {
+			return d.y;
+		}
+	};
+
+	// Pointer to d3 circles
+	var endPoints = svg
+	.selectAll('circle')
+	.data(circle)
+	.enter()
+	.append('circle')
+	.attr(endPointsAttributtes)
 };
 
-
-function displayLine(data) {
-  var line = backLayer.append("path")
-    .datum(data)
-    .attr({
-      d: lineGenerator(data),
-      fill: 'none',
-      stroke: "red",
-      "stroke-width": "3px",
-      "shape-rendering": "geometricPrecision"
-    });
-
-  var totalLength = line.node().getTotalLength();
-}
-
 </script>
-  </body>
+</body>
 </html>

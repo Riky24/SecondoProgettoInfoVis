@@ -4,8 +4,8 @@ import random
 
 # Configurazione dell'applicativo
 
-P1 = 0.5  #probabilità di biforcazione
-P2 = 0.5  #probabilità di tagliare la biforcazione
+P1 = 0.97  #probabilità di biforcazione
+P2 = 0.02  #probabilità di tagliare la biforcazione
 
 bif = 0  #numero di biforcazioni
 ID = 0
@@ -44,18 +44,16 @@ def creaFigli(block_pred, lista, n):
 
 #funzione che genera il file json della blockchain di profondità massima n
 def creaJson(n):
-	#data_set = {"key1": [1, 2, 3], "key2": [4, 5, 6]}
-	#json_dump = json.dumps(data_set)
-	#print(json_dump)
 
 	lista = []
 	radice = creaBlocco({}, -1)
 	lista.append(radice)
 	creaFigli(radice, lista, n)
+	newList = sorted(lista, key=lambda k: k['height'])
 
-	data_set = {"blocks": lista}
+	data_set = {"blocks": newList}
 	with open("blockchain.json", "w") as blockchain:
 		json.dump(data_set, blockchain)
 	
 
-creaJson(10)
+creaJson(150)
