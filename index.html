@@ -19,8 +19,6 @@
 	circle {
 		shape-rendering: crispEdges;
 		vector-effect: non-scaling-stroke;
-
-		fill: lightsteelblue;
 		stroke: steelblue;
 		stroke-width: 1.5px;
 	}
@@ -185,7 +183,8 @@ function generator(data){
 		},
 		'cy': function(d) {
 			return d.y;
-		}
+		},
+		'fill': 'lightsteelblue'
 	};
 
 	// Pointer to d3 circles
@@ -195,6 +194,37 @@ function generator(data){
 	.enter()
 	.append('circle')
 	.attr(endPointsAttributtes)
+	.on("mouseover", handleMouseOver)
+	.on("mouseout", handleMouseOut);
+	
+	function handleMouseOver(d, i) {  // Add interactivite
+		  
+		    d3.select(this).attr({
+              fill: "orange",
+              r: rad
+            });
+
+            // Specify where to put label of text
+            svg.append("text").attr({
+               id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
+                x: function() { return d.x - 30; },
+                y: function() { return d.y - 20; }
+            })
+            .text(function() {
+              return [d.x, d.y];  // Value of the text
+            });
+    }
+		  
+	function handleMouseOut(d, i) {
+            // Use D3 to select element, change color back to normal
+            d3.select(this).attr({
+              fill: "lightsteelblue",
+              r: rad
+            });
+
+            // Select text by id and then remove
+            d3.select("#t" + d.x + "-" + d.y + "-" + i).remove();  // Remove text location
+    }
 };
 
 </script>
