@@ -1,6 +1,8 @@
 <html>
 <head>
-	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
+    <script src="lib/d3.v6.min.js"></script>
 </head>
 <style type="text/css">
 
@@ -39,44 +41,57 @@
 
 		var width = 1000; 
 		var rad = 5;
+		var ydist = 15;
+		var xdist = 25;
 		var svg = d3.select('svg');
 
 		var directionLR = true;
 		var edges = [];
 		var nodes = [];
+		var dic = [];
+
+		function getBaseLog(x, y) {
+  			return Math.log(y) / Math.log(x);
+		}
 
 		function setXY(n1, n2){
 			let varX = 0;
 			let d = n1.x;
 			let h = n1.y;
+
+			// se mi sposto da sinistra a destra incremento x
 			if (directionLR) {
-				varX = d+30;
+				varX = d+xdist;
 			}
+			// altrimento la decremento
 			else {
-				varX = d-30;
+				varX = d-xdist;
 			}
 
+			// se supero il limite destro scendo verticalmente e cambio verso di marcia
 			if (varX>=width) {
-				h = h+20;
+				h = h+ydist;
 				varX = d;
 				directionLR = false;
+				n1.border = 1;
 			}
+			// stressa cosa se raggiungo il limite sinistro
 			else if (varX<=10) {
 				directionLR = true;
-				h = h+20;
+				h = h+ydist;
 				varX = d;
+				n1.border = 1;
 			}
-
-			else if (!directionLR&&(varX+60>=width)) {
-				h = h+20;
-			}
-			else if (directionLR&&(varX-60<=10) && n1.prev_block!="") {
-				h = h+20;
+			// se sono un secondo figlio sul bordo ignoro il cambio di marcia
+			else if ((!directionLR&&(varX+(xdist*2))>=width)||(directionLR&&(varX-(xdist*2)<=10) && n1.prev_block!="")) {
+				if (n1.border==1){
+					h = h+ydist;
+				}
 			}
 
 			let varY = h;
 			if(n1.son>1){
-				varY = (h+20);
+				varY = (h+ydist);
 			}
 			n2.y = varY; 
 			n2.x = varX;
@@ -89,144 +104,248 @@
 			}
 		}
 
-function createEdges(block){
-	if (block.prev_block!=""){
-		let edge = {"hashFrom": block.prev_block, "hashTo": block.hash};
-		if (getNode(edge,0)!=null){
-			getNode(edge,0).son += 1;
-		};
-		edges.push(edge);
-	}
-	nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":20, "y":20, "son":0})
-}
-
-function getNode(edge, position){
-	let n = null;
-	if (position==0){
-		n = nodes.filter(node => node.hash == edge.hashFrom);
-	}
-	else{
-		n = nodes.filter(node => node.hash == edge.hashTo);
-	}
-	return n[0];
-}
-
-
-var data = d3.json("blockchain.json", function(data) {
-	console.log(data);
-
-	var dataSet = data.blocks.map(function(block) {
-		d = block.height;
-		createEdges(block);
-	});
-
-	var coordinates = edges.map(function(edge){
-		n1 = getNode(edge, 0);
-		n2 = getNode(edge, 1);
-		return setXY(n1, n2);
-	});
-	generator(coordinates);
-
-});
-
-function generator(data){
-	// Generating the svg lines attributes
-	var lineAttributes = {
-		'x1': function(d) {
-			return d.x1;
-		},
-		'y1': function(d) {
-			return d.y1;
-		},
-		'x2': function(d) {
-			return d.x2;
-		},
-		'y2': function(d) {
-			return d.y2;
+		function createEdges(block){
+			if (block.prev_block!=""){
+				let edge = {"hashFrom": block.prev_block, "hashTo": block.hash};
+				if (getNode(edge,0)!=null){
+					getNode(edge,0).son += 1;
+					getNode(edge,0).sonCount += 1;
+				};
+				edges.push(edge);
+			}
+			nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":20, "y":20, "son":0, "sonCount":0, "border":0, "cluster":0})
 		}
-	};
 
-	// Pointer to the d3 lines
-	var lines = svg
-	.selectAll('line')
-	.data(data)
-	.enter()
-	.append('line')
-	.attr(lineAttributes);
+		function getNode(edge, position){
+			let n = null;
+			if (position==0){
+				n = nodes.filter(node => node.hash == edge.hashFrom);
+			}
+			else{
+				n = nodes.filter(node => node.hash == edge.hashTo);
+			}
+			return n[0];
+		}
 
-	var topEndPoints = data.map(function(line, i) {
-		return {
-			'x': line.x1,
-			'y': line.y1,
-			'marker': 'marker-start',
-			'lineIndex': i 
+		function getEdge(node){
+			if (node){
+				e = edges.filter(edge => edge.hashFrom == node.hash);
+				//console.log(e[0]);
+				return e;
+			}
+			else return null;
+		}
+
+		// il primo node deve essere quello che ha padre nullo
+		function nodiConsecutivi(node, list){
+			if (node.sonCount <= 1){
+				//console.log("dentro l'if");
+				list.push(node);
+				let edge = getEdge(node)[0];
+				if (edge){
+					let son = getNode(edge, 1);
+					if (son){
+						let x = nodiConsecutivi(son, list);
+						return x;
+					}
+				}
+				else{
+					return node;
+				}
+			}
+			else{
+				list.push(node); // l'ultimo nodo della lista è il padre dello split
+				return node;
+			}
+		}
+
+		function generaArchi(tempList, firstPrevBlock){
+			console.log(tempList, firstPrevBlock);
+		}
+
+		function valutaLista(list, archiCluster){
+			//console.log(list);
+			let tempList = [];
+			let l = list.length-1;
+			let firstPrevBlock = list[0].prev_block;
+			while (l>1000){
+				let expClust = Math.floor(getBaseLog(2, l));
+				//console.log(expClust);
+				let sizeClust = 2**expClust;
+				//console.log(sizeClust);
+				l -= sizeClust;
+				var node = {"prev_block": 0, "hash": 0, "height": -1, "x":20, "y":20, "son":0, "sonCount":0, "border":0, "cluster":1, "nodi":[]};
+				while(sizeClust>0){
+					sizeClust -= 1;
+					let t = list.shift();
+					node.nodi.push(t);
+				}
+				//console.log(node);
+				tempList.push(node);
+			}
+			l = list.length;
+			while(l>0){
+				t = list.shift();
+				tempList.push(t);
+			}
+			generaArchi(tempList, firstPrevBlock);
+		}
+
+		function createClusterDic(node, archiCluster){
+			let list = [];
+			let n = nodiConsecutivi(node, list);
+			//console.log(n);
+			//valutaLista(list, archiCluster);
+			// for (var i = 0; i < 10; i++) {
+			//   text += "The number is " + i;
+			//   console.log(text);
+			// }
+			let ed = getEdge(n);
+			if (ed){
+				//console.log(ed);
+				ed.forEach(arco => {
+					//console.log("sono dentro");
+					let b = getNode(arco, 1);
+					createClusterDic(b);
+				});
+			}
+		}
+
+		function init(archi){
+			first = nodes.filter(node => node.prev_block == "")[0];
+			//console.log(first);
+			var archiCluster = [];
+			createClusterDic(first, archiCluster);
+			graphGen(archi);
+		}
+
+		function graphGen(archi){
+			var coordinates = archi.map(function(edge){
+				n1 = getNode(edge, 0);
+				n2 = getNode(edge, 1);
+				return setXY(n1, n2);
+			});
+			draw(coordinates);
+		}
+
+		function sottoinsiemeArchi(){
+			//console.log(nodes);
+			return edges;
+		}
+
+
+		var data = d3.json("blockchain.json", function(data) {
+			//console.log(data);
+
+			var dataSet = data.blocks.map(function(block) {
+				d = block.height;
+				createEdges(block);
+			});
+
+			var archi = sottoinsiemeArchi();
+			init(archi);		
+
+		});
+
+		function draw(data){
+			// Generating the svg lines attributes
+			var lineAttributes = {
+				'x1': function(d) {
+					return d.x1;
+				},
+				'y1': function(d) {
+					return d.y1;
+				},
+				'x2': function(d) {
+					return d.x2;
+				},
+				'y2': function(d) {
+					return d.y2;
+				}
+			};
+
+			// Pointer to the d3 lines
+			var lines = svg
+			.selectAll('line')
+			.data(data)
+			.enter()
+			.append('line')
+			.attr(lineAttributes);
+
+			var topEndPoints = data.map(function(line, i) {
+				return {
+					'x': line.x1,
+					'y': line.y1,
+					'marker': 'marker-start',
+					'lineIndex': i 
+				};
+			});
+
+			var bottomEndPoints = data.map(function(line, i) {
+				return {
+					'x': line.x2,
+					'y': line.y2,
+					'marker': 'marker-end',
+					'lineIndex': i
+				};
+			});
+
+			var endPointsData = topEndPoints.concat(bottomEndPoints);
+			var circle = bottomEndPoints.concat(topEndPoints[0]);
+			//console.log(circle);
+
+			// Generating the svg circle attributes
+			var endPointsAttributtes = {
+				'r': rad,
+				'cx': function(d) {
+					return d.x;
+				},
+				'cy': function(d) {
+					return d.y;
+				},
+				'fill': 'lightsteelblue'
+			};
+
+			// Pointer to d3 circles
+			var endPoints = svg
+			.selectAll('circle')
+			.data(circle)
+			.enter()
+			.append('circle')
+			.attr(endPointsAttributtes)
+			.on("mouseover", handleMouseOver)
+			.on("mouseout", handleMouseOut);
+			
+			function handleMouseOver(d, i) {  // Add interactivite
+				  
+			    d3.select(this).attr({
+		          fill: "orange",
+		          r: rad
+		        });
+
+		        // Specify where to put label of text
+		        svg.append("text").attr({
+		           id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
+		            x: function() { return d.x - 30; },
+		            y: function() { return d.y - 20; }
+		        })
+		        .text(function() {
+		          return [d.x, d.y];  // Value of the text
+		        });
+		    }
+				  
+			function handleMouseOut(d, i) {
+		        // Use D3 to select element, change color back to normal
+		        d3.select(this).attr({
+		          fill: "lightsteelblue",
+		          r: rad
+		        });
+
+		        // Select text by id and then remove
+		        d3.select("#t" + d.x + "-" + d.y + "-" + i).remove();  // Remove text location
+		    }
 		};
-	});
 
-	var bottomEndPoints = data.map(function(line, i) {
-		return {
-			'x': line.x2,
-			'y': line.y2,
-			'marker': 'marker-end',
-			'lineIndex': i
-		};
-	});
-
-	var endPointsData = topEndPoints.concat(bottomEndPoints);
-	var circle = bottomEndPoints.concat(topEndPoints[0]);
-
-	// Generating the svg circle attributes
-	var endPointsAttributtes = {
-		'r': rad,
-		'cx': function(d) {
-			return d.x;
-		},
-		'cy': function(d) {
-			return d.y;
-		},
-		'fill': 'lightsteelblue'
-	};
-
-	// Pointer to d3 circles
-	var endPoints = svg
-	.selectAll('circle')
-	.data(circle)
-	.enter()
-	.append('circle')
-	.attr(endPointsAttributtes)
-	.on("mouseover", handleMouseOver)
-	.on("mouseout", handleMouseOut);
-	
-	function handleMouseOver(d, i) {  // Add interactivite
-		  
-		    d3.select(this).attr({
-              fill: "orange",
-              r: rad
-            });
-
-            // Specify where to put label of text
-            svg.append("text").attr({
-               id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
-                x: function() { return d.x - 30; },
-                y: function() { return d.y - 20; }
-            })
-            .text(function() {
-              return [d.x, d.y];  // Value of the text
-            });
-    }
-		  
-	function handleMouseOut(d, i) {
-            // Use D3 to select element, change color back to normal
-            d3.select(this).attr({
-              fill: "lightsteelblue",
-              r: rad
-            });
-
-            // Select text by id and then remove
-            d3.select("#t" + d.x + "-" + d.y + "-" + i).remove();  // Remove text location
-    }
-};
-
-</script>
+	</script>
 </body>
 </html>
