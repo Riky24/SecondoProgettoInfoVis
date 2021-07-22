@@ -30,6 +30,10 @@
 	circle.active-d3-item {
 		fill: red;
 	}
+	
+	text {
+		transform: translate(0px, 15px)
+	}
 
 </style>
 <body>
@@ -423,7 +427,6 @@
 			.on("mouseover", handleMouseOver)
 			.on("mouseout", handleMouseOut)
 			.on("click", showCluster)
-			.append("xhtml:div").attr("style", "width:190px; height:90px; overflow-y:auto").text("Thiggfis the dgdexsgsggs wish to fit insidegssgsgs");
 
 			endPoints.attr(endPointsAttributtes);
 
@@ -439,10 +442,10 @@
 			endPointsText.enter()
 			.append('text')
 			.attr("class", "text")
+			.attr("text-anchor", "middle")
 			.text(function(d){
 				return d.nodi;
 			})
-			.attr("text-anchor", "end")
 			.attr('x', function(d){
 				return d.x;
 			})
@@ -452,7 +455,7 @@
             .attr('fill', 'black');
 
             //aggiornamento
-			endPoints.text(function(d){
+			endPointsText.text(function(d){
 				return d.nodi;
 			})
 			.attr('x', function(d){
@@ -469,16 +472,17 @@
 		        });
 
 		        // Specify where to put label of text
-		        svg.append("text").attr({
-		           id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
-		            x: function() { return d.x - 5; },
-		            y: function() { return d.y - 20; }
-		        })
-		        .text(function() {
+//		        svg.append("text").attr({
+	//	           id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
+		//            x: function() { return d.x - 5; },
+		  //          y: function() { return d.y - 20; }
+		    //    })
+		      //  .text(function() {
 		          //return [d.x, d.y];  // Value of the text
 		          //console.log(d);
-		          return [d.nodi];
-		        });
+		          //return [d.nodi];
+		        //});
+				
 		    }
 				  
 			function handleMouseOut(d, i) {
