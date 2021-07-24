@@ -1,10 +1,12 @@
 # Importazione delle librerie
 import json
 import random
+import sys
+sys.setrecursionlimit(10**6)
 
 # Configurazione dell'applicativo
 
-P1 = 0.97  #probabilità di biforcazione
+P1 = 0.999  #probabilità di biforcazione
 P2 = 0.02  #probabilità di tagliare la biforcazione
 
 bif = 0  #numero di biforcazioni
@@ -56,4 +58,4 @@ def creaJson(n):
 		json.dump(data_set, blockchain)
 	
 
-creaJson(150)
+creaJson(1100)
