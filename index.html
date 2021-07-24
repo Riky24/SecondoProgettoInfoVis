@@ -93,7 +93,7 @@
 
 		// funzione che dati due nodi in ingresso (n1 padre e n2 figlio) 
 		// setta le coordinate di n2 per la rappresentazione
-		function setXY(n1, n2, i){
+		function setXY(n1, n2){
 			//console.log("n1",n1);
 			//console.log("n2",n2);
 			let varX = 0;
@@ -154,10 +154,6 @@
 			}
 			let nodi = n2.nodi;
 			let archi = n2.archi;
-			if(i){
-				nodi = n1.nodi;
-				archi = n1.archi;
-			}
 			return {
 				x2: varX,
 				y2: varY,
@@ -166,8 +162,12 @@
 				//nodi: getBaseLog(2, n2.nodi.length),
 				// nodi: i?n1.nodi:n2.nodi,
 				// archi: i?n1.archi:n2.archi
-				nodi: nodi,
-				archi: archi
+				nodi1: n1.nodi,
+				archi1: n1.archi,
+				hash1: n1.hash,
+				nodi2: nodi,
+				archi2: archi,
+				hash2: n2.hash
 			}
 		}
 
@@ -406,15 +406,15 @@
 		// generazione del grafo dagli archi passati
 		function graphGen(archi){
 			resetSon();
-			let i = false;
+			let i = 0;
 			var coordinates = archi.map(function(edge){
+				i++;
 				n1 = getNode(edge, 0);
 				n2 = getNode(edge, 1);
 				console.log("n1",n1);
 				console.log("n2",n2);
-				let ret = setXY(n1, n2, i);
-				i = false;
-				return ret;
+				console.log(i);
+				return setXY(n1, n2);
 			});
 			console.log("coordinates",coordinates);
 			draw(coordinates);
@@ -447,11 +447,23 @@
 				'y2': function(d) {
 					return d.y2;
 				},
-				'nodi': function(d) {
-					return getBaseLog(2, d.nodi.length);
+				'nodi1': function(d) {
+					return getBaseLog(2, d.nodi1.length);
 				},
-				'archi': function(d) {
-					return d.archi;
+				'archi1': function(d) {
+					return d.archi1;
+				},
+				'hash1': function(d) {
+					return d.hash1;
+				},
+				'nodi2': function(d) {
+					return getBaseLog(2, d.nodi2.length);
+				},
+				'archi2': function(d) {
+					return d.archi2;
+				},
+				'hash2': function(d) {
+					return d.hash2;
 				}
 			};
 
@@ -475,8 +487,9 @@
 					'y': line.y1,
 					'marker': 'marker-start',
 					'lineIndex': i,
-					'nodi': getBaseLog(2, line.nodi.length),
-					'archi': line.archi
+					'nodi': getBaseLog(2, line.nodi1.length),
+					'archi': line.archi1,
+					'hash': line.hash1
 				};
 			});
 
@@ -486,8 +499,9 @@
 					'y': line.y2,
 					'marker': 'marker-end',
 					'lineIndex': i,
-					'nodi': getBaseLog(2, line.nodi.length),
-					'archi': line.archi
+					'nodi': getBaseLog(2, line.nodi2.length),
+					'archi': line.archi2,
+					'hash': line.hash2
 				};
 			});
 
