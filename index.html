@@ -287,7 +287,7 @@
 				listInput = [];
 				let split = Math.sqrt(listNodi.length);
 				let intSplit = Math.floor(split);
-				console.log("entrato", intSplit);
+				//console.log("entrato", intSplit);
 				while(listNodi.length>0){
 					let tmpList = [];
 					let tmpSplit = intSplit;
@@ -297,9 +297,9 @@
 						//node.nodi.push(t);
 						tmpList.push(t);
 					}
-					console.log("tmpList-ciclo", tmpList);
+					//console.log("tmpList-ciclo", tmpList);
 					let cluster = generaSottoCluster(tmpList, id+1);
-					console.log("cluster", cluster);
+					//console.log("cluster", cluster);
 					listInput = listInput.concat(cluster);
 					// let first = getNode(archi[0],0);
 					// if(first){
@@ -311,7 +311,7 @@
 					// });
 					//console.log("listInput",listInput, id);
 				}
-				console.log("listInput(-68-)", listInput);
+				//console.log("listInput(-68-)", listInput);
 			}
 			//console.log("listaNodi", listaNodi);
 			let tmpList = generaArchi(listInput, "firstPrevBlock");
@@ -350,7 +350,7 @@
 				listArchi = generaListArchiFromNodi([...listNodi], id);
 				//console.log("listArchi-valutalista",listArchi, id);
 				node.archi = listArchi;
-				console.log(expClust, listNodi, listArchi);
+				//console.log(expClust, listNodi, listArchi);
 				tempList.push(node);
 				nodes.push(node);
 			}
@@ -399,8 +399,8 @@
 			edgesCluster = archiCluster;
 			//graphGen(archi);
 			graphGen(edgesCluster);
-			console.log("archi", archi);
-			console.log("archiCluster", archiCluster);
+			//console.log("archi", archi);
+			//console.log("archiCluster", archiCluster);
 		}
 
 		// generazione del grafo dagli archi passati
@@ -411,9 +411,9 @@
 				i++;
 				n1 = getNode(edge, 0);
 				n2 = getNode(edge, 1);
-				console.log("n1",n1);
-				console.log("n2",n2);
-				console.log(i);
+				//console.log("n1",n1);
+				//console.log("n2",n2);
+				//console.log(i);
 				return setXY(n1, n2);
 			});
 			console.log("coordinates",coordinates);
@@ -421,7 +421,7 @@
 		}
 
 		var data = d3.json("blockchain.json", function(data) {
-			//console.log(data);
+			console.log(data);
 
 			var dataSet = data.blocks.map(function(block) {
 				d = block.height;
