@@ -519,7 +519,14 @@
 				'y': function(d) {
 					return d.y-10;
 				},
-				'fill': 'lightsteelblue'
+				'fill': function(d) {
+					if(d.nodi==0){
+						return 'lightsalmon';
+					}
+					else{
+						return 'lightsteelblue';
+					}
+				} 
 			};
 
 			// Pointer to d3 circles
@@ -553,7 +560,12 @@
 			.attr("class", "text")
 			.attr("text-anchor", "middle")
 			.text(function(d){
-				return d.nodi;
+				if(d.nodi==0){
+					return "B";
+				}
+				else{
+					return d.nodi;
+				}
 			})
 			.attr('x', function(d){
 				return d.x;
@@ -568,7 +580,12 @@
 
             //aggiornamento
 			endPointsText.text(function(d){
-				return d.nodi;
+				if(d.nodi==0){
+					return "B";
+				}
+				else{
+					return d.nodi;
+				}
 			})
 			.attr('x', function(d){
 				return d.x;

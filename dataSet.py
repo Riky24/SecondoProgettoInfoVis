@@ -70,9 +70,9 @@ def creaJson(n):
 		else:
 			result = creaFigli(result[1], result[0], n)
 			n = 0
-		lista = lista.extend(result[0])
+		lista.extend(result[0])
 		print(len(lista))
-	newList = sorted(result[0], key=lambda k: k['height'])
+	newList = sorted(lista, key=lambda k: k['height'])
 	#print(newList)
 
 	data_set = {"blocks": newList}
@@ -80,4 +80,4 @@ def creaJson(n):
 		json.dump(data_set, blockchain)
 	
 
-creaJson(20000)
+creaJson(2000)
