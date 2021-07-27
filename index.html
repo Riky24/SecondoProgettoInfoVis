@@ -47,7 +47,7 @@
 		var width = 1000; 
 		var rad = 5;
 		var ydist = 25;
-		var xdist = 30;
+		var xdist = 20;
 		var svg = d3.select('svg');
 		var xDefault = 20;
 		var yDefault = 40;
@@ -65,7 +65,8 @@
 		// logaritmo base x di y
 		function getBaseLog(x, y) {
 			if(y!=0){
-  				return Math.log(y) / Math.log(x);
+  				log = Math.log(y) / Math.log(x);
+  				return Math.floor(log);
   			}
   			return 0;
   		}
@@ -96,45 +97,54 @@
 		function setXY(n1, n2){
 			//console.log("n1",n1);
 			//console.log("n2",n2);
+			let x1lenMez = 0;
+			let x2lenMez = ((getBaseLog(2, n2.nodi.length)*10)+20)/2;
 			let varX = 0;
 			let directionLR = true;
-			let d = xDefault;  //valore di default
-			//console.log(n2);
+			let d = xDefault+x2lenMez;  //valore di default
+			let h = yDefault;  //valore di default
+			//console.log(n2.nodi);
 			if(n1){
 				d = n1.x;
+				h = n1.y;
 				directionLR = n1.directionLR;
 				n2.directionLR = n1.directionLR;
-			}
-			let h = yDefault;  //valore di default
-			if(n1){
-				h = n1.y;
+				x1lenMez = ((getBaseLog(2, n1.nodi.length)*10)+20)/2;
 			}
 
 			// se mi sposto da sinistra a destra incremento x
 			if (directionLR) {
-				varX = d+xdist;
+				varX = d;
+				if(n1){
+					varX = d+x1lenMez+xdist+x2lenMez;
+				}
 			}
 			// altrimento la decremento
 			else {
-				varX = d-xdist;
+				varX = d;  // è un errore, questa rappresentazione lo evidenzia
+				if(n1){
+					varX = d-(x1lenMez+xdist+x2lenMez);
+				}
 			}
 
 			// se supero il limite destro scendo verticalmente e cambio verso di marcia
-			if (varX>=width) {
+			if ((varX+x2lenMez)>=width) {
 				h = h+ydist;
-				varX = d;
+				//varX = d;
+				varX = width-xDefault-x2lenMez;
 				n2.directionLR = false;
 				n1.border = 1;
 			}
 			// stressa cosa se raggiungo il limite sinistro
-			else if (varX<=10) {
+			else if ((varX-x2lenMez)<=10) {
 				n2.directionLR = true;
 				h = h+ydist;
-				varX = d;
+				//varX = d;
+				varX = xDefault+x2lenMez;
 				n1.border = 1;
 			}
 			// se sono un secondo figlio sul bordo ignoro il cambio di marcia
-			else if (n1&&(!directionLR&&(varX+(xdist*2))>=width)||n1&&(directionLR&&(varX-(xdist*2)<=10) && n1.prev_block!="")) {
+			else if (n1&&((!directionLR&&(varX+x2lenMez+xDefault)>=width)||(directionLR&&(varX-(x2lenMez+xDefault)<=10) && n1.prev_block!=""))) {
 				if (n1.border==1){
 					h = h+ydist;
 				}
@@ -167,7 +177,9 @@
 				hash1: n1.hash,
 				nodi2: nodi,
 				archi2: archi,
-				hash2: n2.hash
+				hash2: n2.hash,
+				dir1: n1.directionLR,
+				dir2: n1.directionLR
 			}
 		}
 
@@ -436,13 +448,47 @@
 			// Generating the svg lines attributes
 			var lineAttributes = {
 				'x1': function(d) {
-					return d.x1;
+					let l = d.x2;
+					if(d.x1<d.x2){
+						if(getBaseLog(2, d.nodi1.length)==0){
+							l = d.x1+10;
+						}
+						else{
+							l = d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+						}
+					}
+					else{
+						if(getBaseLog(2, d.nodi1.length)==0){
+							l = d.x1-10;
+						}
+						else{
+							l = d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+						}
+					}
+					return l;
 				},
 				'y1': function(d) {
 					return d.y1;
 				},
 				'x2': function(d) {
-					return d.x2;
+					let l = d.x2;
+					if(d.x1<d.x2){
+						if(getBaseLog(2, d.nodi2.length)==0){
+							l = d.x2-10;
+						}
+						else{
+							l = d.x2-((10*getBaseLog(2, d.nodi2.length)+20)/2)-10;
+						}
+					}
+					else{
+						if(getBaseLog(2, d.nodi2.length)==0){
+							l = d.x2+10;
+						}
+						else{
+							l = d.x2+((10*getBaseLog(2, d.nodi2.length)+20)/2)-10;
+						}
+					}
+					return l;
 				},
 				'y2': function(d) {
 					return d.y2;
@@ -511,10 +557,21 @@
 
 			// Generating the svg circle attributes
 			var endPointsAttributtes = {
-				'width': 20,
+				'width': function(d) {
+					if(d.nodi==0){
+						return 20;
+					}
+					else{
+						let l = 20+((d.nodi)*10);
+						return l;
+					}
+				},
 				'height': 20,
 				'x': function(d) {
-					return d.x-10;
+					if(d.nodi==0){
+						return d.x-10;
+					}
+					return d.x-(20+((d.nodi)*10)/2);
 				},
 				'y': function(d) {
 					return d.y-10;
@@ -564,7 +621,8 @@
 					return "B";
 				}
 				else{
-					return d.nodi;
+					//return d.nodi;
+					return "";
 				}
 			})
 			.attr('x', function(d){
@@ -584,7 +642,8 @@
 					return "B";
 				}
 				else{
-					return d.nodi;
+					//return d.nodi;
+					return "";
 				}
 			})
 			.attr('x', function(d){

@@ -7,7 +7,7 @@ sys.setrecursionlimit(10**6)
 # Configurazione dell'applicativo
 
 P1 = 0.999  #probabilità di biforcazione
-P2 = 0.02  #probabilità di tagliare la biforcazione
+P2 = 0.1  #probabilità di tagliare la biforcazione
 
 bif = 0  #numero di biforcazioni
 ID = 0
