@@ -41,6 +41,7 @@
 	<div class="container" style="margin-top:10px; text-align:right">
 		<button onclick="backToHome()">Home</button>
 	</div>
+	<div id="my_dataviz"></div>
 	<svg width="1000px"; height="1000px";></svg>
 	<script>
 
@@ -512,6 +513,20 @@
 					return d.hash2;
 				}
 			};
+			
+							
+		  // create a tooltip
+		  var tooltip = d3.select("#my_dataviz")
+			.append("div")
+			.style("opacity", 0)
+			.attr("class", "tooltip")
+			.style("background-color", "white")
+			.style("border", "solid")
+			.style("position", "absolute")
+			.style("border-width", "1px")
+			.style("border-radius", "5px")
+			.style("padding", "5px")
+
 
 			// Pointer to the d3 lines
 			var lines = svg
@@ -598,6 +613,7 @@
 			.attr("class", "rect")
 			.attr(endPointsAttributtes)
 			.on("mouseover", handleMouseOver)
+			.on("mousemove", handleMouseOver)
 			.on("mouseout", handleMouseOut)
 			.on("click", showCluster)
 
@@ -633,6 +649,7 @@
 			})
             .attr('fill', 'black')
 			.on("mouseover", handleMouseOver)
+			.on("mousemove", handleMouseOver)
 			.on("mouseout", handleMouseOut)
 			.on("click", showCluster);
 
@@ -653,35 +670,18 @@
 				return d.y-10;
 			});
 			
-			function handleMouseOver(d, i) {  // Add interactivite
-				  
-			    d3.select(this).attr({
-		          //fill: "orange"
-		        });
-
-		        // Specify where to put label of text
-//		        svg.append("text").attr({
-	//	           id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
-		//            x: function() { return d.x - 5; },
-		  //          y: function() { return d.y - 20; }
-		    //    })
-		      //  .text(function() {
-		          //return [d.x, d.y];  // Value of the text
-		          //console.log(d);
-		          //return [d.nodi];
-		        //});
-				
-		    }
+			function handleMouseOver(d, i) {
+			  tooltip
+			  .style("opacity", 1)				// Add interactivite
+			  .html("I nodi nel cluster sono: " + d.nodi)
+			  .style("left", (d3.mouse(this)[0]+35) + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
+			  .style("top", (d3.mouse(this)[1]+10) + "px")
+			 }
 				  
 			function handleMouseOut(d, i) {
-		        // Use D3 to select element, change color back to normal
-		        d3.select(this).attr({
-		          //fill: "lightsteelblue",
-		          //r: rad
-		        });
-
-		        // Select text by id and then remove
-		        d3.select("#t" + d.x + "-" + d.y + "-" + i).remove();  // Remove text location
+		        // Use D3 to select element, change color back to norma			
+				tooltip
+				  .style("opacity", 0)
 		    }
 
 		    function showCluster(d, i) {
