@@ -46,14 +46,13 @@
 	<script>
 
 		var width = 1000; 
-		var rad = 5;
+		//var rad = 5;
 		var ydist = 25;
 		var xdist = 20;
 		var svg = d3.select('svg');
 		var xDefault = 20;
 		var yDefault = 40;
 
-		//var directionLR = true;
 		var edges = [];
 		var edgesCluster = [];
 		var nodes = [];
@@ -72,14 +71,12 @@
   			return 0;
   		}
 
-		// genera un id univoco di lunghezza simile all'hash
+		// genera un id univoco simile all'hash
 		function makeID(seed){
-			var timestamp = new Date().valueOf();
-			idBase = 1000000000000000000;
-			//return timestamp+idBase+seed;
 			return uuidv4()+seed;
 		}
 
+		//genera un id
 		function uuidv4() {
 			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 				var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -87,6 +84,7 @@
 			});
 		}
 
+		//funzione che resetta il contatore son
 		function resetSon(){
 			nodes.forEach(nodo => {
 				nodo.son = nodo.sonCount;
@@ -96,15 +94,13 @@
 		// funzione che dati due nodi in ingresso (n1 padre e n2 figlio) 
 		// setta le coordinate di n2 per la rappresentazione
 		function setXY(n1, n2){
-			//console.log("n1",n1);
-			//console.log("n2",n2);
 			let x1lenMez = 0;
 			let x2lenMez = ((getBaseLog(2, n2.nodi.length)*10)+20)/2;
-			let varX = 0;
+			let varX = x2lenMez;
 			let directionLR = true;
 			let d = xDefault+x2lenMez;  //valore di default
 			let h = yDefault;  //valore di default
-			//console.log(n2.nodi);
+			//se il padre del nodo esiste (nodi diversi dal primo)
 			if(n1){
 				d = n1.x;
 				h = n1.y;
@@ -122,7 +118,7 @@
 			}
 			// altrimento la decremento
 			else {
-				varX = d;  // è un errore, questa rappresentazione lo evidenzia
+				varX = d;  // se n1 non esiste è un errore, questa rappresentazione lo evidenzia
 				if(n1){
 					varX = d-(x1lenMez+xdist+x2lenMez);
 				}
@@ -131,7 +127,6 @@
 			// se supero il limite destro scendo verticalmente e cambio verso di marcia
 			if ((varX+x2lenMez)>=width) {
 				h = h+ydist;
-				//varX = d;
 				varX = width-xDefault-x2lenMez;
 				n2.directionLR = false;
 				n1.border = 1;
@@ -140,7 +135,6 @@
 			else if ((varX-x2lenMez)<=10) {
 				n2.directionLR = true;
 				h = h+ydist;
-				//varX = d;
 				varX = xDefault+x2lenMez;
 				n1.border = 1;
 			}
@@ -170,17 +164,15 @@
 				y2: varY,
 				x1: n1.x,
 				y1: n1.y,
-				//nodi: getBaseLog(2, n2.nodi.length),
-				// nodi: i?n1.nodi:n2.nodi,
-				// archi: i?n1.archi:n2.archi
 				nodi1: n1.nodi,
 				archi1: n1.archi,
 				hash1: n1.hash,
 				nodi2: nodi,
 				archi2: archi,
 				hash2: n2.hash,
-				dir1: n1.directionLR,
-				dir2: n1.directionLR
+				border1: n1.border,
+				border2: n2.border,
+				dir2: n2.directionLR
 			}
 		}
 
@@ -216,7 +208,6 @@
 		function getEdge(node){
 			if (node){
 				e = edges.filter(edge => edge.hashFrom == node.hash);
-				//console.log(e[0]);
 				return e;
 			}
 			else return null;
@@ -226,7 +217,6 @@
 		// fino ad arrivare ad una biforcazione
 		function nodiConsecutivi(node, list){
 			if (node.sonCount <= 1){
-				//console.log("dentro l'if");
 				list.push(node);
 				let edge = getEdge(node)[0];
 				if (edge){
@@ -249,14 +239,11 @@
 		// data una lista ordinata di nodi ed un nodo in testa a cui attaccare gli 
 		// altri genera una lista degli archi che collegano tali nodi
 		function generaArchi(blockList, firstPrevBlock){
-			//console.log("tempList", blockList);
-			//console.log("firstPrevBlock", firstPrevBlock);
 			var resultList = [];
 			let pred = firstPrevBlock;
 			let length = blockList.length;
 			for(let i=0; i<length; i++){
 				let id = makeID(blockList[i].hash);
-				//let id = 0;
 				let e = {"hashFrom": pred, "hashTo": blockList[i].hash, "id": id};
 				resultList.push(e);
 				pred = blockList[i].hash;
@@ -265,23 +252,19 @@
 		}
 
 		function generaSottoCluster(list, id){
-			//console.log("listaNodi", list);
 			let returnList = [];
 			let l = list.length;
 			while(l>0){
 				let expClust = Math.floor(getBaseLog(2, l));
-				//console.log(expClust);
 				let sizeClust = 2**expClust;
-				//console.log(sizeClust);
 				l -= sizeClust;
 				let id1 = makeID(Math.random()*1000000000000000000);
-				var node = {"prev_block": 0, "hash": id1, "height": -1, "x":xDefault, "y":yDefault, "son":0, "sonCount":1, "border":0, "cluster":1, "nodi":[], "archi":[], "directionLR": true};
+				var node = {"prev_block": 0, "hash": id1, "height": -1, "x":xDefault+50, "y":yDefault, "son":0, "sonCount":1, "border":0, "cluster":1, "nodi":[], "archi":[], "directionLR": true};
 				let listArchi = [];
 				let listNodi = [];
 				while(sizeClust>0){
 					sizeClust -= 1;
 					let t = list.shift();
-					//node.nodi.push(t);
 					listNodi.push(t);
 				}
 				node.nodi = listNodi;
@@ -293,42 +276,25 @@
 		}
 
 		function generaListArchiFromNodi(listaNodi, id){
-			//console.log("listaNodi", listaNodi);
 			let listNodi = [...listaNodi];  // lista di appoggio
 			let listInput = [...listaNodi];
 			if(listNodi.length>2**6){
 				listInput = [];
 				let split = Math.sqrt(listNodi.length);
 				let intSplit = Math.floor(split);
-				//console.log("entrato", intSplit);
 				while(listNodi.length>0){
 					let tmpList = [];
 					let tmpSplit = intSplit;
 					while(tmpSplit>0&&listNodi.length>0){
 						tmpSplit -= 1;
 						let t = listNodi.shift();
-						//node.nodi.push(t);
 						tmpList.push(t);
 					}
-					//console.log("tmpList-ciclo", tmpList);
 					let cluster = generaSottoCluster(tmpList, id+1);
-					//console.log("cluster", cluster);
 					listInput = listInput.concat(cluster);
-					// let first = getNode(archi[0],0);
-					// if(first){
-					// 	listInput.push(first);
-					// }
-					// archi.forEach(arco => {
-					// 	let node = getNode(arco,1);
-					// 	listInput.push(node);
-					// });
-					//console.log("listInput",listInput, id);
 				}
-				//console.log("listInput(-68-)", listInput);
 			}
-			//console.log("listaNodi", listaNodi);
 			let tmpList = generaArchi(listInput, "firstPrevBlock");
-			//console.log("tmpList", tmpList);
 			c = tmpList.shift();
 			if(c.hashFrom!="firstPrevBlock"){
 				console.log("errore rimozione primo arco");
@@ -339,15 +305,12 @@
 		// data una lista di nodi genera i nodi cluster con il metodo dell'esponenziale, 
 		// li inserisce in nodes e ritorna una lista con gli archi che collegano tali nodi cluster
 		function valutaLista(list, id){
-			//console.log(list);
 			let tempList = [];
 			let l = list.length-1;
 			let firstPrevBlock = list[0].prev_block;
 			while (l>1){
 				let expClust = Math.floor(getBaseLog(2, l));
-				//console.log(expClust);
 				let sizeClust = 2**expClust;
-				//console.log(sizeClust);
 				l -= sizeClust;
 				let id1 = makeID(list[0].hash);
 				var node = {"prev_block": 0, "hash": id1, "height": -1, "x":xDefault, "y":yDefault, "son":0, "sonCount":1, "border":0, "cluster":1, "nodi":[], "archi":[], "directionLR": true};
@@ -356,26 +319,21 @@
 				while(sizeClust>0){
 					sizeClust -= 1;
 					let t = list.shift();
-					//node.nodi.push(t);
 					listNodi.push(t);
 				}
 				node.nodi = listNodi;
 				listArchi = generaListArchiFromNodi([...listNodi], id);
-				//console.log("listArchi-valutalista",listArchi, id);
 				node.archi = listArchi;
-				//console.log(expClust, listNodi, listArchi);
 				tempList.push(node);
 				nodes.push(node);
 			}
 			l = list.length;
-			//console.log(tempList);
 			while(l>0){
 				t = list.shift();
 				tempList.push(t);
 				l = l-1;
 			}
 			let arc = generaArchi(tempList, firstPrevBlock);
-			//console.log("arc",arc, id);
 			return arc;
 		}
 
@@ -385,35 +343,26 @@
 			let list = [];
 			var archiCluster = [];
 			let n = nodiConsecutivi(node, list);
-			//console.log("list",list);
 			archiCluster = valutaLista(list, id);
 			let ed = getEdge(n);
 			let archiTmp = [];
 			if (ed){
-				//console.log(ed);
 				ed.forEach(arco => {
 					let b = getNode(arco, 1);
-					//console.log("sono dentro", b, id);
 					archiTmp = createClusterDic(b, id+1);
-					//console.log("archiTmp", archiTmp, id);
 					archiCluster = archiCluster.concat(archiTmp);
 				});
 			}
-			//console.log("archiCluster-interno", archiCluster, id);
 			return archiCluster;
 		}
 
 		// funzione di inizializzazione archi
 		function init(archi){
 			first = nodes.filter(node => node.prev_block == "")[0];
-			//console.log(first);
 			var archiCluster = [];
 			archiCluster = createClusterDic(first, 0); //deve ritornare archiCluster
 			edgesCluster = archiCluster;
-			//graphGen(archi);
 			graphGen(edgesCluster);
-			//console.log("archi", archi);
-			//console.log("archiCluster", archiCluster);
 		}
 
 		// generazione del grafo dagli archi passati
@@ -424,17 +373,12 @@
 				i++;
 				n1 = getNode(edge, 0);
 				n2 = getNode(edge, 1);
-				//console.log("n1",n1);
-				//console.log("n2",n2);
-				//console.log(i);
 				return setXY(n1, n2);
 			});
-			console.log("coordinates",coordinates);
 			draw(coordinates);
 		}
 
 		var data = d3.json("blockchain.json", function(data) {
-			console.log(data);
 
 			var dataSet = data.blocks.map(function(block) {
 				d = block.height;
@@ -445,11 +389,9 @@
 
 		});
 
-		function draw(data){
-			// Generating the svg lines attributes
-			var lineAttributes = {
-				'x1': function(d) {
-					let l = d.x2;
+		function getX1(d){
+			let l = d.x1-10;
+				if(d.border1==0){
 					if(d.x1<d.x2){
 						if(getBaseLog(2, d.nodi1.length)==0){
 							l = d.x1+10;
@@ -466,13 +408,21 @@
 							l = d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
 						}
 					}
-					return l;
-				},
-				'y1': function(d) {
-					return d.y1;
-				},
-				'x2': function(d) {
-					let l = d.x2;
+				}
+				else if(d.dir2&&(d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)>d.x2){
+
+					l = d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+				}
+				else if(!d.dir2&&(d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)<d.x2){
+					
+					l = d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+				}
+			return l;
+		}
+
+		function getX2(d){
+			let l = d.x2-10;
+				if(d.border1==0){
 					if(d.x1<d.x2){
 						if(getBaseLog(2, d.nodi2.length)==0){
 							l = d.x2-10;
@@ -489,9 +439,35 @@
 							l = d.x2+((10*getBaseLog(2, d.nodi2.length)+20)/2)-10;
 						}
 					}
-					return l;
+				}
+			return l;
+		}
+
+		function draw(data){
+			// Generating the svg lines attributes
+			var lineAttributes = {
+				'x1': function(d) {
+					return getX1(d);
+				},
+				'y1': function(d) {
+					if(d.border1==1){
+						if(d.dir2&&(d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)>d.x2){
+							return d.y1;
+						}
+						else if(!d.dir2&&(d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)<d.x2){
+							return d.y1;
+						}
+						return d.y1+10;
+					}
+					return d.y1;
+				},
+				'x2': function(d) {
+					return getX2(d);
 				},
 				'y2': function(d) {
+					if(d.border1==1){
+						return d.y2-10;
+					}
 					return d.y2;
 				},
 				'nodi1': function(d) {
@@ -513,9 +489,9 @@
 					return d.hash2;
 				}
 			};
-			
-							
-		  // create a tooltip
+
+
+			// create a tooltip
 		  var tooltip = d3.select("#my_dataviz")
 			.append("div")
 			.style("opacity", 0)
@@ -568,7 +544,6 @@
 
 			var endPointsData = topEndPoints.concat(bottomEndPoints);
 			var circle = [topEndPoints[0]].concat(bottomEndPoints);
-			//console.log(circle);
 
 			// Generating the svg circle attributes
 			var endPointsAttributtes = {
@@ -601,7 +576,7 @@
 				} 
 			};
 
-			// Pointer to d3 circles
+			// Pointer to d3 rect
 			var endPoints = svg
 			.selectAll('.rect')
 			.data(circle);
@@ -637,7 +612,6 @@
 					return "B";
 				}
 				else{
-					//return d.nodi;
 					return "";
 				}
 			})
@@ -659,7 +633,6 @@
 					return "B";
 				}
 				else{
-					//return d.nodi;
 					return "";
 				}
 			})
@@ -672,14 +645,15 @@
 			
 			function handleMouseOver(d, i) {
 			  tooltip
-			  .style("opacity", 1)				// Add interactivite
-			  .html("I nodi nel cluster sono: " + d.nodi)
-			  .style("left", (d3.mouse(this)[0]+35) + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
+			  .style("opacity", 1)		// Add interactivite
+			  .html("I nodi nel cluster sono: 2^" + d.nodi)
+			  // It is important to put the +XX: other wise the tooltip is 
+			  // exactly where the point is an it creates a weird effect
+			  .style("left", (d3.mouse(this)[0]+35) + "px") 
 			  .style("top", (d3.mouse(this)[1]+10) + "px")
 			 }
 				  
-			function handleMouseOut(d, i) {
-		        // Use D3 to select element, change color back to norma			
+			function handleMouseOut(d, i) {		
 				tooltip
 				  .style("opacity", 0)
 		    }
@@ -689,7 +663,6 @@
 		    	if(d.nodi>0){
 		    		graphGen(d.archi);
 		    	}
-		    	console.log(d);
 		    }
 		};
 
