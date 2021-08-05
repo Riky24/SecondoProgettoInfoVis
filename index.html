@@ -64,8 +64,8 @@
 		var level = 0;
 		
 		function backToHome(){		
-			d3.select('#home').style("visibility", "hidden")
-			d3.select('#back').style("visibility", "hidden")
+			d3.select('#home')//.style("visibility", "hidden")
+			d3.select('#back')//.style("visibility", "hidden")
 			graphGen(edgesCluster);
 		}
 		
@@ -300,12 +300,21 @@
 			return returnList;
 		}
 
+		//funzione che ritorna il numero di elementi dello split secondo la logica definita
+		function logicaSeparazione(totalLength){  //2^9
+			 let logInit = Math.floor(getBaseLog(2, totalLength));  //9
+			 let expCluster = Math.floor(logInit/2);  //4
+			 let numCluster = 2**expCluster;  //2^4
+			 let numeElement = Math.floor(totalLength/numCluster);  //2^5
+			 return numeElement;
+		}
+
 		function generaListArchiFromNodi(listaNodi, id){
 			let listNodi = [...listaNodi];  // lista di appoggio
 			let listInput = [...listaNodi];
 			if(listNodi.length>2**6){
 				listInput = [];
-				let split = Math.sqrt(listNodi.length);
+				let split = logicaSeparazione(listNodi.length);
 				let intSplit = Math.floor(split);
 				while(listNodi.length>0){
 					let tmpList = [];
