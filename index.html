@@ -63,9 +63,11 @@
 		var dict= {}
 		var level = 0;
 		
-		function backToHome(){		
-			d3.select('#home')//.style("visibility", "hidden")
-			d3.select('#back')//.style("visibility", "hidden")
+		function backToHome(){
+			level = 0;
+			dict.level -= 0		
+			d3.select('#home').style("visibility", "hidden")
+			d3.select('#back').style("visibility", "hidden")
 			graphGen(edgesCluster);
 		}
 		
@@ -484,11 +486,11 @@
 		function draw(data){
 		
 		if (level > 1) {
-			d3.select('#home').style("opacity", 1)
-			d3.select('#back').style("opacity", 1)
+			d3.select('#home').style("visibility", "visible")
+			d3.select('#back').style("visibility", "visible")
 		} else {
-			d3.select('#home').style("opacity", 0)
-			d3.select('#back').style("opacity", 0)
+			d3.select('#home').style("visibility", "hidden")
+			d3.select('#back').style("visibility", "hidden")
 		}
 			
 			// Generating the svg lines attributes
