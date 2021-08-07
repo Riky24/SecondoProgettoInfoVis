@@ -46,24 +46,32 @@
 	<svg width="1000px"; height="1000px";></svg>
 	<script>
 
-		var width = 1000; 
-		//var rad = 5;
-		var ydist = 25;
-		var xdist = 20;
-		var svg = d3.select('svg');
+		// valori parametrici
+		var width = 1200; // larghezza svg
+		var ydist = 25; // altezza base tra due livelli
+		var xdist = 10; // distanza base tra due blocchi
+		var expLim = 2**6; // limite massimo prima della clusterizzazione
+
+
+		// variabili globali
 		var xDefault = 20;
 		var yDefault = 40;
-
 		var edges = [];
 		var edgesCluster = [];
 		var nodes = [];
 		var dic = [];
 		var coordinates = [];
 		var coordinatesOld = [];
-		var dict= {}
+		var dict= {};
 		var level = 0;
+
+
+		var svg = d3.select('svg');
+		var positionDict = {};
+		svg.attr('width', width+'px');
 		
 		function backToHome(){
+			resetPos();
 			level = 0;
 			dict.level -= 0		
 			d3.select('#home').style("visibility", "hidden")
@@ -72,6 +80,7 @@
 		}
 		
 		function backTo(){
+			resetPos();
 			if (dict.level == 0) {
 				level = 0;
 				dict.level -= 1
@@ -117,11 +126,44 @@
 			});
 		}
 
+		//funzione che resetta il contatore son
+		function resetPos(){
+			positionDict = {};
+		}
+
+		//funzione che dati x e y controlla che non ci siano sovrapposizioni
+		function checkXY(x, y, w){
+			let dist = xdist;
+			if(w>30){
+				dist = w;
+			}
+			if(positionDict[y]){
+				let max = d3.max(positionDict[y]);
+				let min = d3.min(positionDict[y]);
+				let found = positionDict[y].find(element => (element > x-(xdist*3)) && (element < x+(xdist*3)));
+				if(!found){
+					positionDict[y].push(x);
+					return true;
+				}
+				else{
+					return false;
+				}
+			}
+			else{
+				positionDict[y] = [x];
+				return true;
+			}
+			return true;
+		}
+
 		// funzione che dati due nodi in ingresso (n1 padre e n2 figlio) 
 		// setta le coordinate di n2 per la rappresentazione
 		function setXY(n1, n2){
 			let x1lenMez = 0;
-			let x2lenMez = ((getBaseLog(2, n2.nodi.length)*10)+20)/2;
+			let x2lenMez = (getBaseLog(2, n2.nodi.length)*20)/2;
+			if(x2lenMez==0){
+				x2lenMez=xdist;
+			}
 			let varX = x2lenMez;
 			let directionLR = true;
 			let d = xDefault+x2lenMez;  //valore di default
@@ -132,7 +174,10 @@
 				h = n1.y;
 				directionLR = n1.directionLR;
 				n2.directionLR = n1.directionLR;
-				x1lenMez = ((getBaseLog(2, n1.nodi.length)*10)+20)/2;
+				x1lenMez = 10+(getBaseLog(2, n1.nodi.length)*20)/2;
+				if(x1lenMez==0){
+				x1lenMez=xdist;
+			}
 			}
 
 			// se mi sposto da sinistra a destra incremento x
@@ -150,19 +195,48 @@
 				}
 			}
 
+			// se ho più figli e supero il limite destro scendo verticalmente e cambio verso di marcia prima
+			if (n2.directionLR && n2.son>1 && ((varX+x2lenMez)>=width-120)) {
+				h = (h+ydist*2);
+				varX = n1.x-xDefault-x2lenMez;
+				n2.directionLR = false;
+				n1.border = 1;
+				if(n1 && n1.sonCount>1 && n1.son<=1){//il figlio 1 di n1 sarà rappresentato sopra il padre
+					h = h-(ydist*2);
+					n2.directionLR = true;
+				}
+			}
+			// stressa cosa se raggiungo il limite sinistro
+			if (!n2.directionLR && n2.son>1 && ((varX-x2lenMez)<=120)) {
+				n2.directionLR = true;
+				h = (h+ydist*2);
+				varX = n1.x+xDefault+x2lenMez;
+				n1.border = 1;
+				if(n1 && n1.sonCount>1 && n1.son<=1){//il figlio 1 di n1 sarà rappresentato sopra il padre
+					h = h-(ydist*2);
+					n2.directionLR = false;
+				}
+			}
+
 			// se supero il limite destro scendo verticalmente e cambio verso di marcia
 			if ((varX+x2lenMez)>=width) {
-				h = h+ydist;
+				h = h+(ydist*2);
 				varX = width-xDefault-x2lenMez;
 				n2.directionLR = false;
 				n1.border = 1;
+				if(n1 && n1.sonCount>1 && n1.son<=1){
+					h = h-(ydist*2);
+				}
 			}
 			// stressa cosa se raggiungo il limite sinistro
 			else if ((varX-x2lenMez)<=10) {
 				n2.directionLR = true;
-				h = h+ydist;
+				h = h+(ydist*2);
 				varX = xDefault+x2lenMez;
 				n1.border = 1;
+				if(n1 && n1.sonCount>1 && n1.son<=1){
+					h = h-(ydist*2);
+				}
 			}
 			// se sono un secondo figlio sul bordo ignoro il cambio di marcia
 			else if (n1&&((!directionLR&&(varX+x2lenMez+xDefault)>=width)||(directionLR&&(varX-(x2lenMez+xDefault)<=10) && n1.prev_block!=""))) {
@@ -175,7 +249,12 @@
 			if(n1&&n1.son>1){
 				varY = (h+ydist);
 			}
-			n2.y = varY; 
+			let check = checkXY(varX, varY, x2lenMez);
+			while(!check){
+				varY = varY-ydist;
+				check = checkXY(varX, varY, x2lenMez);
+			}
+			n2.y = varY;
 			n2.x = varX;
 			if(!n1){
 				n1 = n2;
@@ -186,6 +265,7 @@
 			let nodi = n2.nodi;
 			let archi = n2.archi;
 			return {
+				// dati per la rappresentazione
 				x2: varX,
 				y2: varY,
 				x1: n1.x,
@@ -199,8 +279,28 @@
 				border1: n1.border,
 				border2: n2.border,
 				dir2: n2.directionLR,
-				height: n2.height
+				height: n2.height,
+				// dati da visualizzare
+				time1: n1.time,
+				ver1: n1.ver,
+				fee1: n1.fee,
+				nonce1: n1.nonce,
+				n_tx1: n1.n_tx,
+				time2: n2.time,
+				ver2: n2.ver,
+				fee2: n2.fee,
+				nonce2: n2.nonce,
+				n_tx2: n2.n_tx
 			}
+		}
+
+		//funzione che genera i valori da visualizzare
+		function getValues(){
+			let time = Math.floor(Date.now());
+			let fee = Math.floor(Math.random()*100000000);
+			let nonce = Math.floor(Math.random()*10000000000);
+			let n_tx = Math.floor(Math.random() * (1100 - 1000) + 1000);
+			return [time,fee,nonce,n_tx];
 		}
 
 		// funzione che crea un arco a partire dai valori hash di un blocco dato 
@@ -215,7 +315,8 @@
 				};
 				edges.push(edge);
 			}
-			nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":xDefault, "y":yDefault, "son":0, "sonCount":0, "border":0, "cluster":0, "nodi":[], "archi":[], "directionLR": true})
+			let values = getValues();
+			nodes.push({"prev_block": block.prev_block, "hash": block.hash, "height": block.height, "x":xDefault, "y":yDefault, "son":0, "sonCount":0, "border":0, "cluster":0, "nodi":[], "archi":[], "directionLR": true, "time": values[0], "ver": 1, "fee": values[1], "nonce": values[2], "n_tx": values[3]})
 		}
 
 		// dato un arco e la posizione 0 o 1 ritorna il nodo in tale posizione
@@ -278,6 +379,7 @@
 			return resultList;
 		}
 
+		//funzione che genera i cluster intermedi
 		function generaSottoCluster(list, id){
 			let returnList = [];
 			let l = list.length;
@@ -314,7 +416,7 @@
 		function generaListArchiFromNodi(listaNodi, id){
 			let listNodi = [...listaNodi];  // lista di appoggio
 			let listInput = [...listaNodi];
-			if(listNodi.length>2**6){
+			if(listNodi.length>expLim){
 				listInput = [];
 				let split = logicaSeparazione(listNodi.length);
 				let intSplit = Math.floor(split);
@@ -414,6 +516,15 @@
 				n2 = getNode(edge, 1);
 				return setXY(n1, n2);
 			});
+			//calcolo l'altezza massima
+			var max = d3.max(coordinates, function(element){
+				return element["y2"]+50
+			});
+			//setto la dimensione di svg
+			if(max<1000){
+				max = 1000;
+			}
+			svg.attr('height', max+'px');
 			dict = {"coordinatesStart": edgesCluster, "coordinatesPrec": coordinatesOld, "level": level++}
 			draw(coordinates);
 		}
@@ -430,53 +541,55 @@
 		});
 
 		function getX1(d){
-			let l = d.x1-10;
-				if(d.border1==0){
-					if(d.x1<d.x2){
-						if(getBaseLog(2, d.nodi1.length)==0){
+			let l = d.x1;
+			let log = getBaseLog(2, d.nodi1.length);// log base 2 del numero di nodi
+				if(d.border1==0){ //se non siamo su un bordo
+					if(d.x1<d.x2){// quando il nodo padre è più a sinistra del figlio
+						if(log==0){//caso blocco base
 							l = d.x1+10;
 						}
-						else{
-							l = d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+						else{//caso cluster
+							l = d.x1+((20*log)/2);
 						}
 					}
-					else{
-						if(getBaseLog(2, d.nodi1.length)==0){
+					else{//se il padre è a destra del figlio
+						if(log==0){
 							l = d.x1-10;
 						}
 						else{
-							l = d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+							l = d.x1-((20*log)/2);
 						}
 					}
 				}
-				else if(d.dir2&&(d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)>d.x2){
+				else if(d.dir2&&(d.x1-((20*log)/2))>d.x2){//se siamo su un bordo, la direzione è da sinistra a destra, se il padre è più a destra del figlio
 
-					l = d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+					l = d.x1-((20*log)/2);
 				}
-				else if(!d.dir2&&(d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)<d.x2){
+				else if(!d.dir2&&(d.x1+((20*log)/2))<d.x2){//se siamo su un bordo, la direzione è da destra a sinistra, se il padre è più a sinistra del figlio
 					
-					l = d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10;
+					l = d.x1+((20*log)/2);
 				}
 			return l;
 		}
 
 		function getX2(d){
-			let l = d.x2-10;
-				if(d.border1==0){
-					if(d.x1<d.x2){
-						if(getBaseLog(2, d.nodi2.length)==0){
+			let l = d.x2;
+			let log = getBaseLog(2, d.nodi2.length); // log base 2 del numero di nodi
+				if(d.border1==0){  //se non siamo su un bordo
+					if(d.x1<d.x2){  // quando il nodo padre è più a sinistra del figlio
+						if(log==0){  //caso blocco base
 							l = d.x2-10;
 						}
-						else{
-							l = d.x2-((10*getBaseLog(2, d.nodi2.length)+20)/2)-10;
+						else{  //caso cluster
+							l = d.x2-((20*log)/2);
 						}
 					}
-					else{
-						if(getBaseLog(2, d.nodi2.length)==0){
+					else{  //se il padre è a destra del figlio
+						if(log==0){
 							l = d.x2+10;
 						}
 						else{
-							l = d.x2+((10*getBaseLog(2, d.nodi2.length)+20)/2)-10;
+							l = d.x2+((20*log)/2);
 						}
 					}
 				}
@@ -499,24 +612,12 @@
 					return getX1(d);
 				},
 				'y1': function(d) {
-					if(d.border1==1){
-						if(d.dir2&&(d.x1-((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)>d.x2){
-							return d.y1;
-						}
-						else if(!d.dir2&&(d.x1+((10*getBaseLog(2, d.nodi1.length)+20)/2)-10)<d.x2){
-							return d.y1;
-						}
-						return d.y1+10;
-					}
 					return d.y1;
 				},
 				'x2': function(d) {
 					return getX2(d);
 				},
 				'y2': function(d) {
-					if(d.border1==1){
-						return d.y2-10;
-					}
 					return d.y2;
 				},
 				'nodi1': function(d) {
@@ -539,6 +640,40 @@
 				},
 				'height': function(d) {
 					return d.height;
+				},
+				'prev_block': function(d) {
+					return d.prev_block;
+				},
+				//
+				'time1': function(d) {
+					return d.time1;
+				},
+				'time2': function(d) {
+					return d.time2;
+				},
+				'ver1': function(d) {
+					return d.ver1;
+				},
+				'ver2': function(d) {
+					return d.ver2;
+				},
+				'fee1': function(d) {
+					return d.fee1;
+				},
+				'fee2': function(d) {
+					return d.fee2;
+				},
+				'nonce1': function(d) {
+					return d.nonce1;
+				},
+				'nonce2': function(d) {
+					return d.nonce2;
+				},
+				'n_tx1': function(d) {
+					return d.n_tx1;
+				},
+				'n_tx2': function(d) {
+					return d.n_tx2;
 				}
 			};
 
@@ -579,7 +714,12 @@
 					'nodi': getBaseLog(2, line.nodi1.length),
 					'archi': line.archi1,
 					'hash': line.hash1,
-					'height': line.height
+					'height': line.height,
+					'time': line.time1,
+					'ver': line.ver1,
+					'fee': line.fee1,
+					'nonce': line.nonce1,
+					'n_tx': line.n_tx1
 				};
 			});
 
@@ -592,7 +732,12 @@
 					'nodi': getBaseLog(2, line.nodi2.length),
 					'archi': line.archi2,
 					'hash': line.hash2,
-					'height': line.height
+					'height': line.height,
+					'time': line.time2,
+					'ver': line.ver2,
+					'fee': line.fee2,
+					'nonce': line.nonce2,
+					'n_tx': line.n_tx2
 				};
 			});
 
@@ -606,7 +751,7 @@
 						return 20;
 					}
 					else{
-						let l = 20+((d.nodi)*10);
+						let l = d.nodi*20;
 						return l;
 					}
 				},
@@ -615,7 +760,9 @@
 					if(d.nodi==0){
 						return d.x-10;
 					}
-					return d.x-(20+((d.nodi)*10)/2);
+					else{
+						return d.x-((d.nodi*20)/2);
+					}
 				},
 				'y': function(d) {
 					return d.y-10;
@@ -698,24 +845,31 @@
 			});
 			
 			function handleMouseOver(d, i) {
-			   if (d.nodi > 0) {
-				  tooltip
+				handleMouseOut(d, i);
+				if (d.nodi > 0) {
+					tooltip
 				  .style("opacity", 1)		// Add interactivite
 				  .html("I nodi nel cluster sono: 2^" + d.nodi)
 				  // It is important to put the +XX: other wise the tooltip is 
 				  // exactly where the point is an it creates a weird effect
 				  .style("left", (d3.mouse(this)[0]+35) + "px") 
 				  .style("top", (d3.mouse(this)[1]+10) + "px")
-			  } else {
-				  tooltip
+				} else {
+					tooltip
 				  .style("opacity", 1)		// Add interactivite
-				  .html("Height: " + d.height + "<br>" + "Hash: " + d.hash)
+				  .html("Hash: " + d.hash + "<br>" + 
+				  	"Height: " + d.height + "<br>" + 
+				  	"Nonce: " + d.nonce + "<br>" + 
+				  	"Fee: " + d.fee + "<br>" +
+				  	"Version: " + d.ver + "<br>" + 
+				  	"Time: " + d.time + "<br>" +
+				  	"N° tx: " + d.n_tx)
 				  // It is important to put the +XX: other wise the tooltip is 
 				  // exactly where the point is an it creates a weird effect
 				  .style("left", (d3.mouse(this)[0]+35) + "px") 
 				  .style("top", (d3.mouse(this)[1]+10) + "px")
-			  }
-			 }
+				}
+			}
 				  
 			function handleMouseOut(d, i) {		
 				tooltip
@@ -723,6 +877,9 @@
 		    }
 
 		    function showCluster(d, i) {
+		    	handleMouseOut(d, i);
+		    	resetPos();
+		    	window.scrollTo(0, 0);
 		    	d3.select("#t" + d.x + "-" + d.y + "-" + i).remove();
 		    	if(d.nodi>0){
 		    		graphGen(d.archi);
